@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Predicción de Deserción Estudiantil — Grupo 07</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root {
+    --azul:     #1F4E79;
+    --azul-med: #2E75B6;
+    --azul-clr: #D6E9F8;
+    --verde:    #1E8449;
+    --rojo:     #C0392B;
+    --naranja:  #E67E22;
+    --gris-bg:  #F0F4F8;
+    --gris-brd: #CBD5E0;
+    --blanco:   #FFFFFF;
+    --texto:    #1A202C;
+    --texto-2:  #4A5568;
+    --radio:    10px;
+    --sombra:   0 2px 12px rgba(0,0,0,0.08);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--gris-bg); color: var(--texto); }
+
+  /* ── HEADER ── */
+  header {
+    background: linear-gradient(135deg, var(--azul) 0%, var(--azul-med) 100%);
+    color: #fff; padding: 32px 40px 28px;
+    display: flex; align-items: center; gap: 24px;
+  }
+  .header-icon { font-size: 2.8rem; }
+  .header-text h1 { font-size: 1.55rem; font-weight: 700; letter-spacing: -0.3px; }
+  .header-text p  { font-size: 0.85rem; opacity: 0.8; margin-top: 4px; }
+  .header-badge {
+    margin-left: auto; background: rgba(255,255,255,0.15);
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 20px; padding: 6px 16px;
+    font-size: 0.78rem; font-weight: 600; white-space: nowrap;
+  }
+
+  /* ── TABS ── */
+  .tabs { display: flex; background: var(--azul); padding: 0 40px; gap: 4px; }
+  .tab {
+    padding: 13px 22px; cursor: pointer; font-size: 0.88rem; font-weight: 600;
+    color: rgba(255,255,255,0.65); border-bottom: 3px solid transparent;
+    transition: all 0.2s; user-select: none;
+  }
+  .tab:hover { color: #fff; }
+  .tab.active { color: #fff; border-bottom-color: #fff; }
+
+  /* ── CONTENIDO ── */
+  .tab-content { display: none; padding: 32px 40px; max-width: 1200px; margin: 0 auto; }
+  .tab-content.active { display: block; }
+
+  /* ── CARDS ── */
+  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 28px; }
+  .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; margin-bottom: 28px; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 28px; }
+  .card {
+    background: var(--blanco); border-radius: var(--radio);
+    padding: 24px; box-shadow: var(--sombra);
+  }
+  .card-title {
+    font-size: 0.78rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.8px; color: var(--texto-2); margin-bottom: 10px;
+  }
+  .metric-val { font-size: 2.2rem; font-weight: 800; color: var(--azul); line-height: 1; }
+  .metric-sub { font-size: 0.8rem; color: var(--texto-2); margin-top: 5px; }
+  .metric-badge {
+    display: inline-block; font-size: 0.72rem; font-weight: 700;
+    padding: 2px 8px; border-radius: 12px; margin-top: 6px;
+  }
+  .badge-green { background: #D4EFDF; color: var(--verde); }
+  .badge-red   { background: #FADBD8; color: var(--rojo); }
+  .badge-blue  { background: var(--azul-clr); color: var(--azul); }
+
+  .section-title {
+    font-size: 1.05rem; font-weight: 700; color: var(--azul);
+    margin-bottom: 16px; padding-bottom: 8px;
+    border-bottom: 2px solid var(--azul-clr);
+  }
+  .chart-wrap { position: relative; }
+
+  /* ── TABLA RESULTADOS ── */
+  table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+  th {
+    background: var(--azul); color: #fff; padding: 10px 14px;
+    text-align: left; font-weight: 600; font-size: 0.8rem;
+  }
+  td { padding: 10px 14px; border-bottom: 1px solid var(--gris-brd); }
+  tr:nth-child(even) td { background: var(--gris-bg); }
+  tr.highlight td { background: #EBF5FB; font-weight: 700; color: var(--azul); }
+  .pill {
+    display: inline-block; padding: 3px 10px; border-radius: 12px;
+    font-size: 0.75rem; font-weight: 700;
+  }
+
+  /* ── CONFUSIÓN ── */
+  .cm-grid {
+    display: grid; grid-template-columns: auto repeat(3, 1fr);
+    gap: 3px; max-width: 420px; margin: 0 auto;
+  }
+  .cm-label { display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 700; color: var(--texto-2); padding: 6px; }
+  .cm-label.col { font-size: 0.72rem; }
+  .cm-cell {
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 6px; font-size: 1.1rem; font-weight: 800;
+    height: 72px; transition: transform 0.1s;
+  }
+  .cm-cell:hover { transform: scale(1.05); }
+  .cm-sub { font-size: 0.65rem; font-weight: 400; display: block; }
+
+  /* ── PREDICTOR ── */
+  .predictor-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+  .field-group { display: flex; flex-direction: column; gap: 6px; }
+  .field-group label { font-size: 0.82rem; font-weight: 600; color: var(--texto-2); }
+  .field-group input, .field-group select {
+    padding: 10px 14px; border: 1.5px solid var(--gris-brd);
+    border-radius: 8px; font-size: 0.9rem; color: var(--texto);
+    background: var(--blanco); transition: border-color 0.2s;
+  }
+  .field-group input:focus, .field-group select:focus {
+    outline: none; border-color: var(--azul-med);
+  }
+  .field-hint { font-size: 0.72rem; color: #718096; }
+  .btn-predict {
+    width: 100%; padding: 14px; background: var(--azul);
+    color: #fff; border: none; border-radius: 8px; font-size: 1rem;
+    font-weight: 700; cursor: pointer; transition: background 0.2s;
+    margin-bottom: 24px;
+  }
+  .btn-predict:hover { background: var(--azul-med); }
+
+  .resultado-box {
+    border-radius: var(--radio); padding: 28px 32px;
+    text-align: center; display: none;
+    border: 2px solid transparent;
+  }
+  .resultado-box.show { display: block; }
+  .resultado-box.dropout  { background: #FDEDEC; border-color: #E74C3C; }
+  .resultado-box.enrolled { background: #FEF9E7; border-color: #F39C12; }
+  .resultado-box.graduate { background: #EAFAF1; border-color: #27AE60; }
+  .resultado-emoji { font-size: 3rem; margin-bottom: 8px; }
+  .resultado-label { font-size: 1.5rem; font-weight: 800; margin-bottom: 6px; }
+  .resultado-desc  { font-size: 0.88rem; color: var(--texto-2); max-width: 380px; margin: 0 auto; }
+  .prob-bars { margin-top: 20px; display: flex; flex-direction: column; gap: 8px; max-width: 340px; margin: 20px auto 0; }
+  .prob-row { display: flex; align-items: center; gap: 10px; font-size: 0.82rem; }
+  .prob-name { width: 80px; text-align: right; font-weight: 600; }
+  .prob-bar-bg { flex: 1; background: #e2e8f0; border-radius: 4px; height: 10px; overflow: hidden; }
+  .prob-bar-fill { height: 100%; border-radius: 4px; transition: width 0.6s ease; }
+  .prob-val { width: 42px; font-weight: 700; }
+
+  /* ── INFO PARAMS ── */
+  .params-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .param-item {
+    background: var(--gris-bg); border-radius: 8px; padding: 14px 16px;
+    border-left: 3px solid var(--azul-med);
+  }
+  .param-key { font-size: 0.72rem; color: var(--texto-2); font-weight: 600; margin-bottom: 4px; }
+  .param-val { font-size: 1rem; font-weight: 800; color: var(--azul); }
+
+  /* ── CV BARS ── */
+  .cv-bars { display: flex; align-items: flex-end; gap: 12px; height: 100px; padding: 0 8px; }
+  .cv-bar-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .cv-bar {
+    width: 100%; background: var(--azul-med); border-radius: 4px 4px 0 0;
+    transition: height 0.6s ease;
+  }
+  .cv-bar-label { font-size: 0.7rem; color: var(--texto-2); font-weight: 600; }
+  .cv-bar-val   { font-size: 0.72rem; font-weight: 700; color: var(--azul); }
+
+  footer {
+    text-align: center; padding: 24px; font-size: 0.78rem;
+    color: var(--texto-2); border-top: 1px solid var(--gris-brd);
+    margin-top: 12px;
+  }
+
+  @media (max-width: 768px) {
+    .grid-4, .grid-3 { grid-template-columns: repeat(2,1fr); }
+    .grid-2, .predictor-grid, .params-grid { grid-template-columns: 1fr; }
+    .tabs { padding: 0 16px; overflow-x: auto; }
+    .tab-content { padding: 20px 16px; }
+    header { padding: 20px 16px; }
+    .header-badge { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-text">
+    <h1>Predicción de Deserción Estudiantil</h1>
+    <p>Grupo 07 · Agentes Inteligentes · USIL 2026-1 · Random Forest + SMOTE Pipeline</p>
+  </div>
+  <div class="header-badge">UCI Dataset id=697 · 4,424 estudiantes</div>
+</header>
+
+<div class="tabs">
+  <div class="tab active" onclick="showTab('resultados', this)"> Resultados del Modelo</div>
+  <div class="tab" onclick="showTab('predictor', this)"> Predicción Interactiva</div>
+  <div class="tab" onclick="showTab('metodologia', this)"> Metodología</div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- TAB 1: RESULTADOS                                          -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<div id="tab-resultados" class="tab-content active">
+
+  <!-- KPIs -->
+  <div class="grid-4">
+    <div class="card">
+      <div class="card-title">Accuracy Global</div>
+      <div class="metric-val">76.95<span style="font-size:1.2rem">%</span></div>
+      <div class="metric-sub">RF Optimizado · conjunto de prueba</div>
+      <span class="metric-badge badge-blue">885 registros evaluados</span>
+    </div>
+    <div class="card">
+      <div class="card-title">F1-Score Ponderado</div>
+      <div class="metric-val">0.770</div>
+      <div class="metric-sub">Weighted average · todas las clases</div>
+      <span class="metric-badge badge-green">+1.63% vs RF base</span>
+    </div>
+    <div class="card">
+      <div class="card-title">CV 5-Fold (F1-W)</div>
+      <div class="metric-val">0.774</div>
+      <div class="metric-sub">Media ± 0.0064 · Pipeline honesto</div>
+      <span class="metric-badge badge-green">IC 95%: [0.761 — 0.787]</span>
+    </div>
+    <div class="card">
+      <div class="card-title">Dataset</div>
+      <div class="metric-val">4,424</div>
+      <div class="metric-sub">Registros · 36 variables</div>
+      <span class="metric-badge badge-blue">Split 80 / 20 estratificado</span>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <!-- Comparación de modelos -->
+    <div class="card">
+      <div class="section-title">Comparación de Modelos</div>
+      <div class="chart-wrap" style="height:240px">
+        <canvas id="chartModelos"></canvas>
+      </div>
+    </div>
+
+    <!-- Distribución de clases -->
+    <div class="card">
+      <div class="section-title">Distribución de Clases en el Dataset</div>
+      <div class="chart-wrap" style="height:240px">
+        <canvas id="chartDist"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <!-- Reporte por clase -->
+    <div class="card">
+      <div class="section-title">Rendimiento por Clase — RF Optimizado</div>
+      <table>
+        <tr><th>Clase</th><th>Precision</th><th>Recall</th><th>F1-Score</th><th>Soporte</th></tr>
+        <tr>
+          <td><span class="pill" style="background:#FADBD8;color:#C0392B">Dropout</span></td>
+          <td>0.843</td><td>0.718</td><td><strong>0.776</strong></td><td>284</td>
+        </tr>
+        <tr>
+          <td><span class="pill" style="background:#FEF9E7;color:#E67E22">Enrolled</span></td>
+          <td>0.515</td><td>0.560</td><td><strong>0.536</strong></td><td>159</td>
+        </tr>
+        <tr>
+          <td><span class="pill" style="background:#D4EFDF;color:#1E8449">Graduate</span></td>
+          <td>0.826</td><td>0.878</td><td><strong>0.851</strong></td><td>442</td>
+        </tr>
+        <tr class="highlight">
+          <td>Weighted avg</td><td>0.777</td><td>0.770</td><td><strong>0.770</strong></td><td>885</td>
+        </tr>
+      </table>
+    </div>
+
+    <!-- Importancia de variables -->
+    <div class="card">
+      <div class="section-title">Top 10 Variables más Importantes</div>
+      <div class="chart-wrap" style="height:260px">
+        <canvas id="chartImportancia"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <!-- Matriz de confusión -->
+    <div class="card">
+      <div class="section-title">Matriz de Confusión — RF Optimizado</div>
+      <p style="font-size:0.78rem;color:var(--texto-2);margin-bottom:16px">Filas = real · Columnas = predicho</p>
+      <div class="cm-grid" id="cm-grid"></div>
+    </div>
+
+    <!-- CV Folds -->
+    <div class="card">
+      <div class="section-title">Validación Cruzada 5-Fold (F1-W)</div>
+      <div class="cv-bars" id="cv-bars"></div>
+      <div style="margin-top:16px;display:flex;gap:20px;justify-content:center;font-size:0.82rem">
+        <span><strong>Media:</strong> 0.7737</span>
+        <span><strong>Desv.:</strong> 0.0064</span>
+        <span><strong>IC 95%:</strong> [0.761 – 0.787]</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- TAB 2: PREDICTOR                                           -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<div id="tab-predictor" class="tab-content">
+  <div class="grid-2">
+    <div class="card">
+      <div class="section-title">Datos del Estudiante</div>
+      <p style="font-size:0.82rem;color:var(--texto-2);margin-bottom:20px">
+        Ingresa los valores académicos y socioeconómicos del estudiante. El modelo usará las 10 variables más predictivas identificadas por el Random Forest optimizado.
+      </p>
+      <div class="predictor-grid">
+        <div class="field-group">
+          <label>Créditos aprobados — 2do sem.</label>
+          <input type="number" id="f1" min="0" max="20" step="1" placeholder="0 – 20">
+          <span class="field-hint">Media del dataset: 4.44</span>
+        </div>
+        <div class="field-group">
+          <label>Calificación promedio — 2do sem.</label>
+          <input type="number" id="f2" min="0" max="18.57" step="0.1" placeholder="0 – 18.57">
+          <span class="field-hint">Media: 10.23</span>
+        </div>
+        <div class="field-group">
+          <label>Créditos aprobados — 1er sem.</label>
+          <input type="number" id="f3" min="0" max="26" step="1" placeholder="0 – 26">
+          <span class="field-hint">Media: 4.71</span>
+        </div>
+        <div class="field-group">
+          <label>Calificación promedio — 1er sem.</label>
+          <input type="number" id="f4" min="0" max="18.88" step="0.1" placeholder="0 – 18.88">
+          <span class="field-hint">Media: 10.64</span>
+        </div>
+        <div class="field-group">
+          <label>Matrícula al día</label>
+          <select id="f5">
+            <option value="1">Sí — pagos al día</option>
+            <option value="0">No — pagos pendientes</option>
+          </select>
+          <span class="field-hint">88% del dataset está al día</span>
+        </div>
+        <div class="field-group">
+          <label>Evaluaciones cursadas — 2do sem.</label>
+          <input type="number" id="f6" min="0" max="33" step="1" placeholder="0 – 33">
+          <span class="field-hint">Media: 8.06</span>
+        </div>
+        <div class="field-group">
+          <label>Nota de admisión</label>
+          <input type="number" id="f7" min="95" max="190" step="0.1" placeholder="95 – 190">
+          <span class="field-hint">Media: 126.98</span>
+        </div>
+        <div class="field-group">
+          <label>Nota de calificación previa</label>
+          <input type="number" id="f8" min="95" max="190" step="0.1" placeholder="95 – 190">
+          <span class="field-hint">Media: 132.61</span>
+        </div>
+        <div class="field-group">
+          <label>Edad al matricularse</label>
+          <input type="number" id="f9" min="17" max="70" step="1" placeholder="17 – 70">
+          <span class="field-hint">Media: 23.27 años</span>
+        </div>
+        <div class="field-group">
+          <label>Código del curso</label>
+          <input type="number" id="f10" min="33" max="9991" step="1" placeholder="33 – 9991">
+          <span class="field-hint">Media: 8856.64</span>
+        </div>
+      </div>
+      <button class="btn-predict" onclick="predecir()"> Predecir trayectoria académica</button>
+    </div>
+
+    <div class="card" style="display:flex;flex-direction:column;justify-content:center;">
+      <div class="section-title">Resultado de la Predicción</div>
+
+      <div id="resultado-placeholder" style="text-align:center;padding:40px 20px;color:var(--texto-2)">
+        <div style="font-size:3rem;margin-bottom:12px">📝</div>
+        <p style="font-size:0.9rem">Completa los datos del estudiante y presiona <strong>Predecir</strong> para obtener la clasificación del modelo.</p>
+      </div>
+
+      <div class="resultado-box dropout" id="res-dropout">
+        <div class="resultado-emoji">⚠️</div>
+        <div class="resultado-label" style="color:#C0392B">Riesgo de Deserción</div>
+        <div class="resultado-desc">El perfil del estudiante presenta indicadores de alto riesgo de abandono. Se recomienda intervención inmediata: tutoría académica y apoyo financiero.</div>
+        <div class="prob-bars" id="bars-dropout"></div>
+      </div>
+
+      <div class="resultado-box enrolled" id="res-enrolled">
+        <div class="resultado-emoji">📚</div>
+        <div class="resultado-label" style="color:#E67E22">Continuidad Incierta</div>
+        <div class="resultado-desc">El estudiante probablemente continúa cursando, pero su trayectoria final es incierta. Se recomienda seguimiento cercano durante los próximos semestres.</div>
+        <div class="prob-bars" id="bars-enrolled"></div>
+      </div>
+
+      <div class="resultado-box graduate" id="res-graduate">
+        <div class="resultado-emoji">🎓</div>
+        <div class="resultado-label" style="color:#1E8449">Perfil de Graduación</div>
+        <div class="resultado-desc">El perfil del estudiante es consistente con trayectorias de graduación exitosa. Los indicadores académicos y financieros son favorables.</div>
+        <div class="prob-bars" id="bars-graduate"></div>
+      </div>
+
+      <div id="res-nota" style="display:none;margin-top:16px;padding:12px;background:var(--gris-bg);border-radius:8px;font-size:0.78rem;color:var(--texto-2)">
+        ℹ️ <strong>Nota metodológica:</strong> Esta predicción se basa en una aproximación heurística de los pesos del modelo Random Forest optimizado.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- TAB 3: METODOLOGÍA                                         -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<div id="tab-metodologia" class="tab-content">
+  <div class="grid-2" style="margin-bottom:24px">
+    <div class="card">
+      <div class="section-title">Flujo de Trabajo (CRISP-DM)</div>
+      <div style="display:flex;flex-direction:column;gap:10px;margin-top:8px">
+        <div id="steps-container"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="section-title">Mejores Hiperparámetros — RF Optimizado</div>
+      <p style="font-size:0.8rem;color:var(--texto-2);margin-bottom:16px">Encontrados con RandomizedSearchCV (30 iter., 5-fold CV, F1-W = 0.7769)</p>
+      <div class="params-grid" id="params-grid"></div>
+    </div>
+  </div>
+
+
+<script>
+// ── DATOS DEL MODELO ────────────────────────────────────────
+const DATA = {
+  metricas: {
+    "RF Optimizado":      {accuracy:0.7695, f1:0.7702},
+    "RF Base":            {accuracy:0.7672, f1:0.7539},
+    "Logistic Reg.":      {accuracy:0.7299, f1:0.7135},
+    "Decision Tree":      {accuracy:0.6972, f1:0.6994},
+    "SVM":                {accuracy:0.4994, f1:0.3327},
+  },
+  dist: {Graduate:2209, Dropout:1421, Enrolled:794},
+  importancia: {
+    "Créd. aprobados 2S": 0.1428,
+    "Calif. 2do sem.":    0.1163,
+    "Créd. aprobados 1S": 0.0802,
+    "Calif. 1er sem.":    0.0576,
+    "Matrícula al día":   0.0486,
+    "Evaluaciones 2S":    0.0393,
+    "Nota admisión":      0.0360,
+    "Curso":              0.0350,
+    "Calif. previa":      0.0346,
+    "Edad ingreso":       0.0341,
+  },
+  cm: {
+    labels: ["Dropout","Enrolled","Graduate"],
+    vals: [[204,40,40],[28,89,42],[10,44,388]]
+  },
+  cv: [0.7738,0.7775,0.7777,0.7781,0.7612],
+  params: {
+    "n_estimators":"100","max_depth":"20",
+    "min_samples_split":"5","min_samples_leaf":"1",
+    "max_features":"sqrt","bootstrap":"False"
+  }
+};
+
+// ── TABS ─────────────────────────────────────────────────────
+function showTab(id, el) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-'+id).classList.add('active');
+  el.classList.add('active');
+}
+
+// ── CHART: MODELOS ───────────────────────────────────────────
+const ctxM = document.getElementById('chartModelos').getContext('2d');
+const modelNames = Object.keys(DATA.metricas);
+new Chart(ctxM, {
+  type: 'bar',
+  data: {
+    labels: modelNames,
+    datasets: [
+      { label:'Accuracy', data: modelNames.map(n=>DATA.metricas[n].accuracy),
+        backgroundColor: modelNames.map(n => n.includes('Opt') ? '#1F4E79' : '#2E75B6'),
+        borderRadius:4 },
+      { label:'F1-Score (W)', data: modelNames.map(n=>DATA.metricas[n].f1),
+        backgroundColor: modelNames.map(n => n.includes('Opt') ? '#A04000' : '#E67E22'),
+        borderRadius:4 }
+    ]
+  },
+  options: {
+    responsive:true, maintainAspectRatio:false,
+    plugins:{ legend:{ position:'top', labels:{font:{size:11}} } },
+    scales:{
+      y:{ min:0.3, max:0.85, ticks:{font:{size:10}} },
+      x:{ ticks:{font:{size:10}} }
+    }
+  }
+});
+
+// ── CHART: DISTRIBUCIÓN ──────────────────────────────────────
+const ctxD = document.getElementById('chartDist').getContext('2d');
+new Chart(ctxD, {
+  type: 'doughnut',
+  data: {
+    labels: ['Graduate (49.9%)','Dropout (32.1%)','Enrolled (17.9%)'],
+    datasets:[{ data:[2209,1421,794],
+      backgroundColor:['#1E8449','#C0392B','#E67E22'],
+      borderWidth:2, borderColor:'#fff' }]
+  },
+  options:{
+    responsive:true, maintainAspectRatio:false,
+    plugins:{ legend:{ position:'bottom', labels:{font:{size:11},padding:12} } }
+  }
+});
+
+// ── CHART: IMPORTANCIA ───────────────────────────────────────
+const ctxI = document.getElementById('chartImportancia').getContext('2d');
+const impKeys = Object.keys(DATA.importancia);
+const impVals = Object.values(DATA.importancia);
+new Chart(ctxI, {
+  type:'bar',
+  data:{
+    labels: impKeys,
+    datasets:[{ label:'Importancia Gini', data:impVals,
+      backgroundColor: impVals.map((_,i) => i<5?'#C0392B':'#2E75B6'),
+      borderRadius:3 }]
+  },
+  options:{
+    indexAxis:'y', responsive:true, maintainAspectRatio:false,
+    plugins:{ legend:{display:false} },
+    scales:{
+      x:{ ticks:{font:{size:9}} },
+      y:{ ticks:{font:{size:9}} }
+    }
+  }
+});
+
+// ── MATRIZ CONFUSIÓN ─────────────────────────────────────────
+function buildCM() {
+  const grid = document.getElementById('cm-grid');
+  const {labels, vals} = DATA.cm;
+  const max = Math.max(...vals.flat());
+  const cols = ['#FADBD8','#FEF9E7','#D4EFDF'];
+
+  grid.innerHTML = '';
+  // Esquina vacía
+  grid.appendChild(Object.assign(document.createElement('div'), {className:'cm-label'}));
+  // Encabezados columnas
+  labels.forEach((l,i) => {
+    const d = document.createElement('div');
+    d.className='cm-label col'; d.textContent=l;
+    d.style.color=['#C0392B','#E67E22','#1E8449'][i];
+    grid.appendChild(d);
+  });
+  // Filas
+  vals.forEach((row,i) => {
+    const lbl = document.createElement('div');
+    lbl.className='cm-label';
+    lbl.textContent=labels[i];
+    lbl.style.color=['#C0392B','#E67E22','#1E8449'][i];
+    lbl.style.fontWeight='700'; lbl.style.fontSize='0.72rem';
+    grid.appendChild(lbl);
+    row.forEach((v,j) => {
+      const alpha = 0.15 + 0.75*(v/max);
+      const d = document.createElement('div');
+      d.className='cm-cell';
+      d.style.background = i===j ? cols[i] : `rgba(200,200,200,${alpha*0.5})`;
+      d.style.border = i===j ? `2px solid ${['#C0392B','#E67E22','#1E8449'][i]}` : '1px solid #e2e8f0';
+      d.innerHTML = `${v}<span class="cm-sub">${(v/vals[i].reduce((a,b)=>a+b,0)*100).toFixed(0)}%</span>`;
+      grid.appendChild(d);
+    });
+  });
+}
+buildCM();
+
+// ── CV BARS ──────────────────────────────────────────────────
+function buildCV() {
+  const container = document.getElementById('cv-bars');
+  const min = 0.74, max = 0.79;
+  DATA.cv.forEach((v,i) => {
+    const pct = ((v-min)/(max-min)*100);
+    container.innerHTML += `
+      <div class="cv-bar-wrap">
+        <div class="cv-bar-val">${v}</div>
+        <div class="cv-bar" style="height:${Math.max(pct,10)}%"></div>
+        <div class="cv-bar-label">Fold ${i+1}</div>
+      </div>`;
+  });
+}
+buildCV();
+
+// ── HIPERPARÁMETROS ──────────────────────────────────────────
+function buildParams() {
+  const grid = document.getElementById('params-grid');
+  Object.entries(DATA.params).forEach(([k,v]) => {
+    grid.innerHTML += `
+      <div class="param-item">
+        <div class="param-key">${k}</div>
+        <div class="param-val">${v}</div>
+      </div>`;
+  });
+}
+buildParams();
+
+// ── STEPS ────────────────────────────────────────────────────
+const steps = [
+  {n:1, t:"Carga del Dataset",        d:"UCI Repository id=697 · 4,424 registros · 36 variables · sin valores nulos"},
+  {n:2, t:"EDA y Análisis",           d:"Distribución de clases · correlaciones · identificación de desbalance (Enrolled 17.9%)"},
+  {n:3, t:"Split Estratificado",      d:"80% entrenamiento (3,539) / 20% prueba (885) · random_state=42 · stratify=y"},
+  {n:4, t:"Modelos Base",             d:"RF · Decision Tree · Logistic Regression · SVM · sin SMOTE · línea de referencia"},
+  {n:5, t:"Pipeline SMOTE + RF",      d:"ImbPipeline encapsula SMOTE y RF · SMOTE aplicado solo en cada fold de entrenamiento"},
+  {n:6, t:"RandomizedSearchCV",       d:"30 iteraciones · 5-fold CV · optimiza F1-W · datos originales sin SMOTE previo"},
+  {n:7, t:"Evaluación Final",         d:"Accuracy 76.95% · F1-W 0.7702 · Reporte por clase · Matriz de confusión"},
+  {n:8, t:"Validación Cruzada",       d:"CV 5-fold con Pipeline · F1-W media 0.7737 ± 0.0064 · IC 95%: [0.761 – 0.787]"},
+];
+const sc = document.getElementById('steps-container');
+steps.forEach(s => {
+  sc.innerHTML += `
+    <div style="display:flex;gap:12px;align-items:flex-start;padding:10px;border-radius:8px;background:var(--gris-bg);margin-bottom:8px">
+      <div style="min-width:28px;height:28px;background:var(--azul);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:700">${s.n}</div>
+      <div>
+        <div style="font-weight:700;font-size:0.87rem">${s.t}</div>
+        <div style="font-size:0.76rem;color:var(--texto-2);margin-top:2px">${s.d}</div>
+      </div>
+    </div>`;
+});
+
+// ── PREDICTOR ────────────────────────────────────────────────
+// Pesos heurísticos derivados de las importancias del RF optimizado
+// Se usa un score ponderado por cada clase para simular la predicción
+function predecir() {
+  const vals = {
+    cr2: parseFloat(document.getElementById('f1').value) || 0,
+    gr2: parseFloat(document.getElementById('f2').value) || 0,
+    cr1: parseFloat(document.getElementById('f3').value) || 0,
+    gr1: parseFloat(document.getElementById('f4').value) || 0,
+    tui: parseFloat(document.getElementById('f5').value) || 1,
+    ev2: parseFloat(document.getElementById('f6').value) || 0,
+    adm: parseFloat(document.getElementById('f7').value) || 127,
+    prv: parseFloat(document.getElementById('f8').value) || 133,
+    age: parseFloat(document.getElementById('f9').value) || 23,
+    crs: parseFloat(document.getElementById('f10').value) || 8857,
+  };
+
+  // Normalizar 0-1 según stats del dataset
+  const norm = {
+    cr2: vals.cr2/20, gr2: vals.gr2/18.57,
+    cr1: vals.cr1/26, gr1: vals.gr1/18.88,
+    tui: vals.tui,    ev2: vals.ev2/33,
+    adm: (vals.adm-95)/95, prv: (vals.prv-95)/95,
+    age: 1-Math.min((vals.age-17)/53, 1),
+    crs: 0.5
+  };
+
+  // Scores para cada clase basados en importancias del RF
+  const sGrad = norm.cr2*0.30 + norm.gr2*0.24 + norm.cr1*0.17 + norm.gr1*0.12
+              + norm.tui*0.10 + norm.adm*0.04 + norm.prv*0.03;
+  const sDrop = (1-norm.cr2)*0.30 + (1-norm.gr2)*0.24 + (1-norm.cr1)*0.17
+              + (1-norm.gr1)*0.12 + (1-norm.tui)*0.10 + (1-norm.adm)*0.04;
+  const sEnrl = norm.ev2*0.25 + Math.abs(norm.cr2-0.35)*0.2 + (1-Math.abs(norm.age-0.3))*0.15;
+
+  const total = sGrad + sDrop + sEnrl;
+  const probs = {
+    Graduate: sGrad/total,
+    Dropout:  sDrop/total,
+    Enrolled: sEnrl/total
+  };
+
+  // Suavizar probabilidades
+  const alpha = 0.3;
+  probs.Graduate = probs.Graduate*(1-alpha) + 0.499*alpha;
+  probs.Dropout  = probs.Dropout*(1-alpha)  + 0.321*alpha;
+  probs.Enrolled = 1 - probs.Graduate - probs.Dropout;
+
+  const winner = Object.entries(probs).sort((a,b)=>b[1]-a[1])[0][0];
+  const colorMap = {Graduate:'#1E8449', Dropout:'#C0392B', Enrolled:'#E67E22'};
+
+  // Ocultar todos
+  ['dropout','enrolled','graduate'].forEach(c => {
+    document.getElementById('res-'+c).classList.remove('show');
+  });
+  document.getElementById('resultado-placeholder').style.display='none';
+
+  const boxId = 'res-'+winner.toLowerCase();
+  document.getElementById(boxId).classList.add('show');
+
+  // Barras de probabilidad
+  const barsId = 'bars-'+winner.toLowerCase();
+  const barsEl = document.getElementById(barsId);
+  barsEl.innerHTML = '';
+  [['Graduate','#1E8449'],['Dropout','#C0392B'],['Enrolled','#E67E22']].forEach(([cls,col]) => {
+    const pct = (probs[cls]*100).toFixed(1);
+    barsEl.innerHTML += `
+      <div class="prob-row">
+        <div class="prob-name">${cls}</div>
+        <div class="prob-bar-bg">
+          <div class="prob-bar-fill" style="width:${pct}%;background:${col}"></div>
+        </div>
+        <div class="prob-val">${pct}%</div>
+      </div>`;
+  });
+
+  document.getElementById('res-nota').style.display='block';
+}
+</script>
+</body>
+</html>
